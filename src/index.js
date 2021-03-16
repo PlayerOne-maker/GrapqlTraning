@@ -11,7 +11,7 @@ const createServer = async() =>{
 
         await mongoose.connect(`mongodb+srv://${DB_Username}:${DB_Password}@grapql.c0ulb.mongodb.net/
         ${DB_Name}?retryWrites=true&w=majority`,
-        { useUnifiedTopology: true ,writeConcern: { w: null } }
+        { useUnifiedTopology: true  }
         )
         
         const app = express();
