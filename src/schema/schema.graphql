@@ -1,6 +1,6 @@
 type Query {
-  login(email:String!,password:String!): AuthData
-  user(id: ID!): User
+  
+  user: User
   users: [User]!
   product(id: ID!): Product
   products: [Product]!
@@ -8,6 +8,8 @@ type Query {
 
 type Mutation {
   signup(name: String!, email: String!, password: String!): User
+  login(email:String!,password:String!): AuthData
+  requsetResetPassword(email:String!):Massage!
   createProduct(
     description: String!
     price: Float!
@@ -53,6 +55,11 @@ type CartItem {
 }
 
 type AuthData{
-  userId :ID
+  user : User
   jwt:String
 }
+
+type Massage{
+  massage: String!
+}
+

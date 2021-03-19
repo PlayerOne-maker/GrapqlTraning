@@ -1,8 +1,10 @@
 import bcrypt from "bcryptjs"
-
+import jwt from "jsonwebtoken"
+import {randomBytes} from "crypto"
 import User from "../models/user"
 import Product from "../models/product"
 import CartItem from "../models/cartItem"
+import sgMail from "@sendgrid/mail"
 
 const Mutation = {
   signup: async (parent, args, context, info) => {
@@ -26,6 +28,70 @@ const Mutation = {
     const password = await bcrypt.hash(args.password, 10)
 
     return User.create({ ...args, email, password })
+  },
+  login: async (parent, args, context, info) => {
+    const {email,password} = args
+
+    const user = await User.findOne({email})     
+    .populate({
+      path: "products",
+      populate: { path: "user" }
+    })
+    .populate({ path: "carts", populate: { path: "product" } })
+
+    if(!user){
+      throw new Error("Email not found")
+    }
+
+    const validPassword = await bcrypt.compare(password,user.password)
+
+    if(!validPassword){
+      throw new Error("Password is wrong")
+    }
+    
+    const token = jwt.sign({userId: user.id}, process.env.SECRET , {expiresIn: '7days'})
+
+    return {user,jwt:token}
+  },
+  requsetResetPassword: async(parent,{email},context,info) =>{
+    const user = await User.findOne({email})
+
+    if(!user){
+      throw new Error('Email not Found')
+    }
+
+    const resetPasswordToken = randomBytes(32).toString('hex')
+
+    const resetTokenExpiry = Date.now() + 30 * 60 * 1000
+
+    await User.findByIdAndUpdate(user.id,{
+      resetPasswordToken,
+      resetTokenExpiry
+    })
+
+    sgMail.setApiKey(process.env.EMAIL_API)
+    const msg ={
+      to : user.email,
+      from : 'oofza93@gmail.com',
+      subject : 'Reset Password Link',
+      html : `
+        <div>
+          <p>Please Click the link to reset your password</p> \n\n
+          <a href='http://localhost:3000/signin/resetpassword?resetToken=${resetPasswordToken}'
+          target='blank' style={{color: 'blue'}}>Click to reset password</a>
+        </div>
+        `
+    };
+
+    sgMail.send(msg).then(() => {}, error => {
+    console.error(error);
+
+    if (error.response) {
+      console.error(error.response.body)
+    }
+  });
+
+    return {massage: 'Pls check your email' }
   },
   createProduct: async (parent, args, {userId}, info) => {
     // const userId = "60504f01b9606c4de06fe39f"
